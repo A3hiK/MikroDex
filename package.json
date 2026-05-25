@@ -1,6 +1,6 @@
 {
   "name": "mikrodex",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Modern Dark Futuristic MikroTik Hotspot Manager Desktop App",
   "main": "electron/main.js",
   "homepage": "./",
