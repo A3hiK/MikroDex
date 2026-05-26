@@ -5,8 +5,8 @@
   "main": "electron/main.js",
   "homepage": "https://A3hiK.github.io/MikroDex/",
   "scripts": {
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
+    "predeploy": "npm run build && New-Item -Path \"dist\\.nojekyll\" -ItemType \"file\" -Force",
+    "deploy": "gh-pages -d dist -t",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
