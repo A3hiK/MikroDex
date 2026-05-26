@@ -83,7 +83,7 @@ const Vouchers = () => {
                  const state = useStore.getState();
                  const price = (state.settings?.profilePrices || {})[u.profile] || 0;
                  if (state.router.ip) {
-                   DatabaseService.saveSale(state.router.ip, u.name, u.profile, price).catch(console.error);
+                   DatabaseService.saveSale(state.router.ip, u.name, u.profile, price);
                  }
                }
 
@@ -202,11 +202,11 @@ const Vouchers = () => {
     }
   };
 
-  const handleMarkAsUsed = async (name) => {
+  const handleMarkAsUsed = (name) => {
     const voucher = vouchers.find(v => v.name === name);
     if (voucher && router.ip) {
       const price = (settings?.profilePrices || {})[voucher.profile] || 0;
-      await DatabaseService.saveSale(router.ip, voucher.name, voucher.profile, price);
+      DatabaseService.saveSale(router.ip, voucher.name, voucher.profile, price);
     }
 
     setUsedSet(prev => {

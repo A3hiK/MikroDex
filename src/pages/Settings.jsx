@@ -22,7 +22,7 @@ const Settings = () => {
 
   const COLOR_THEMES = ['theme-ocean', 'theme-forest', 'theme-purple', 'theme-sunset'];
 
-  const handleSettingChange = async (key, value) => {
+  const handleSettingChange = (key, value) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
 
@@ -33,13 +33,13 @@ const Settings = () => {
         setTheme('');
       }
       updateSettings({ darkMode: value });
-      await DatabaseService.setSetting('appSettings', { ...settings, darkMode: value });
+      DatabaseService.setSetting('appSettings', { ...settings, darkMode: value });
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     updateSettings(localSettings);
-    await DatabaseService.setSetting('appSettings', localSettings);
+    DatabaseService.setSetting('appSettings', localSettings);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

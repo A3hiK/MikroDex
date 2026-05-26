@@ -22,11 +22,8 @@ const LoginPage = () => {
   const [discovering, setDiscovering] = useState(false);
 
   useEffect(() => {
-    const fetchRouters = async () => {
-      const routers = await DatabaseService.getRouters();
-      setSavedRouters(routers);
-    };
-    fetchRouters();
+    const routers = DatabaseService.getRouters();
+    setSavedRouters(routers);
   }, [setSavedRouters]);
 
   const handleInput = (e) => {
@@ -61,9 +58,8 @@ const LoginPage = () => {
         });
 
         if (formData.name) {
-          await DatabaseService.saveRouter(formData.name, formData.ip, formData.username, formData.password);
-          const updatedRouters = await DatabaseService.getRouters();
-          setSavedRouters(updatedRouters);
+          DatabaseService.saveRouter(formData.name, formData.ip, formData.username, formData.password);
+          setSavedRouters(DatabaseService.getRouters());
         }
 
         const usersResult = await MikroTikService.getHotspotUsers();
@@ -121,11 +117,10 @@ const LoginPage = () => {
     }
   };
 
-  const handleDeleteSaved = async (id, e) => {
+  const handleDeleteSaved = (id, e) => {
     e.stopPropagation();
-    await DatabaseService.deleteRouter(id);
-    const updatedRouters = await DatabaseService.getRouters();
-    setSavedRouters(updatedRouters);
+    DatabaseService.deleteRouter(id);
+    setSavedRouters(DatabaseService.getRouters());
   };
 
   const handleKeyDown = (e) => {
