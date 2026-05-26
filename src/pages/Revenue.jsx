@@ -13,8 +13,8 @@ const Revenue = () => {
 
   useEffect(() => {
     if (router.connected && router.ip) {
-       const fetchSales = () => {
-         const sales = DatabaseService.getSales(router.ip);
+       const fetchSales = async () => {
+         const sales = await DatabaseService.getSales(router.ip);
          setSalesData(sales);
          
          const last7Days = [];

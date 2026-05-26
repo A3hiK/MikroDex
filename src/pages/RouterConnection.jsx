@@ -19,8 +19,11 @@ const RouterConnection = () => {
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    const routers = DatabaseService.getRouters();
-    setSavedRouters(routers);
+    const fetchRouters = async () => {
+      const routers = await DatabaseService.getRouters();
+      setSavedRouters(routers);
+    };
+    fetchRouters();
 
     // Auto-reconnect if a previous connection was persisted
     if (router.connected && router.ip && router.username) {
@@ -64,13 +67,14 @@ const RouterConnection = () => {
         });
 
         // Always save/update in Recent Connections (deduplication handled by DatabaseService)
-        DatabaseService.saveRouter(
+        await DatabaseService.saveRouter(
           formData.name || formData.ip,
           formData.ip,
           formData.username,
           formData.password
         );
-        setSavedRouters(DatabaseService.getRouters());
+        const updatedRouters = await DatabaseService.getRouters();
+        setSavedRouters(updatedRouters);
 
         setMessage({ type: 'success', text: 'Connected successfully! Initializing...' });
 
@@ -98,13 +102,13 @@ const RouterConnection = () => {
     setMessage({ type: 'success', text: 'Disconnected successfully' });
   };
 
-  const handleSaveRouter = () => {
+  const handleSaveRouter = async () => {
     if (!formData.name || !formData.ip) {
       setMessage({ type: 'error', text: 'Please fill router name and IP' });
       return;
     }
 
-    const result = DatabaseService.saveRouter(
+    const result = await DatabaseService.saveRouter(
       formData.name,
       formData.ip,
       formData.username,
@@ -112,7 +116,8 @@ const RouterConnection = () => {
     );
 
     if (result.success) {
-      setSavedRouters(DatabaseService.getRouters());
+      const routers = await DatabaseService.getRouters();
+      setSavedRouters(routers);
       setMessage({ type: 'success', text: 'Router profile saved successfully' });
     } else {
       setMessage({ type: 'error', text: result.message });
@@ -128,9 +133,10 @@ const RouterConnection = () => {
     });
   };
 
-  const handleDeleteRouter = (id) => {
-    DatabaseService.deleteRouter(id);
-    setSavedRouters(DatabaseService.getRouters());
+  const handleDeleteRouter = async (id) => {
+    await DatabaseService.deleteRouter(id);
+    const routers = await DatabaseService.getRouters();
+    setSavedRouters(routers);
     setMessage({ type: 'success', text: 'Router profile deleted' });
   };
 

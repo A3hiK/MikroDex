@@ -1,132 +1,81 @@
-// Browser-compatible database service using localStorage
-const DB_KEY = 'mikrodesk_db';
-
-// Load or initialize data
-const loadData = () => {
-  try {
-    const stored = localStorage.getItem(DB_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading data from localStorage:', error);
-  }
-  return {
-    routers: [],
-    users: [],
-    usage_history: [],
-    settings: {},
-    login_history: [],
-    sales: [],
-  };
-};
-
-// Save data
-const saveData = (data) => {
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error('Error saving data to localStorage:', error);
-    return false;
-  }
-};
+import { supabase } from './supabaseClient';
 
 class DatabaseService {
-  constructor() {
-    this.data = loadData();
-    this.nextId = {
-      routers: this.getMaxId('routers') + 1,
-      users: this.getMaxId('users') + 1,
-      usage_history: this.getMaxId('usage_history') + 1,
-      login_history: this.getMaxId('login_history') + 1,
-      sales: this.getMaxId('sales') + 1,
-    };
-    if (!this.data.sales) this.data.sales = [];
-  }
-
-  getMaxId(table) {
-    const items = this.data[table] || [];
-    return items.reduce((max, item) => Math.max(max, item.id || 0), 0);
-  }
-
-  save() {
-    return saveData(this.data);
-  }
-
-  // Router Methods
-  saveRouter(name, ip, username, password, autoConnect = false) {
+  async saveRouter(name, ip, username, password, autoConnect = false) {
     try {
-      // Upsert by IP — same IP updates instead of duplicating
-      const existing = this.data.routers.find((r) => r.ip === ip);
+      // Upsert by IP
+      const { data: existing, error: checkError } = await supabase
+        .from('routers')
+        .select('*')
+        .eq('ip', ip)
+        .single();
+
       if (existing) {
-        existing.name = name || existing.name;
-        existing.username = username;
-        existing.password = password;
-        existing.lastConnected = new Date().toISOString();
-        this.save();
+        const { data, error } = await supabase
+          .from('routers')
+          .update({
+            name: name || existing.name,
+            username,
+            password,
+            lastConnected: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select();
+        if (error) throw error;
         return { success: true, id: existing.id, message: 'Router profile updated' };
       }
-      const router = {
-        id: this.nextId.routers++,
-        name,
-        ip,
-        username,
-        password,
-        autoConnect: autoConnect ? 1 : 0,
-        lastConnected: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-      this.data.routers.push(router);
-      this.save();
-      return {
-        success: true,
-        id: router.id,
-        message: 'Router saved successfully',
-      };
+
+      const { data, error } = await supabase
+        .from('routers')
+        .insert([{ name, ip, username, password, autoConnect }])
+        .select();
+      
+      if (error) throw error;
+      return { success: true, id: data[0].id, message: 'Router saved successfully' };
     } catch (error) {
-      return {
-        success: false,
-        message: `Error saving router: ${error.message}`,
-      };
+      return { success: false, message: `Error saving router: ${error.message}` };
     }
   }
 
-  getRouters() {
+  async getRouters() {
     try {
-      return this.data.routers || [];
+      const { data, error } = await supabase.from('routers').select('*');
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching routers:', error);
       return [];
     }
   }
 
-  getRouterById(id) {
+  async getRouterById(id) {
     try {
-      return (this.data.routers || []).find((r) => r.id === id) || null;
+      const { data, error } = await supabase.from('routers').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
     } catch (error) {
       console.error('Error fetching router:', error);
       return null;
     }
   }
 
-  deleteRouter(id) {
+  async deleteRouter(id) {
     try {
-      this.data.routers = this.data.routers.filter((r) => r.id !== id);
-      this.save();
+      const { error } = await supabase.from('routers').delete().eq('id', id);
+      if (error) throw error;
       return { success: true, message: 'Router deleted successfully' };
     } catch (error) {
       return { success: false, message: `Error deleting router: ${error.message}` };
     }
   }
 
-  updateRouterConnection(id) {
+  async updateRouterConnection(id) {
     try {
-      const router = this.data.routers.find((r) => r.id === id);
-      if (router) {
-        router.lastConnected = new Date().toISOString();
-        this.save();
-      }
+      const { error } = await supabase
+        .from('routers')
+        .update({ lastConnected: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
       return { success: true };
     } catch (error) {
       return { success: false, message: error.message };
@@ -134,44 +83,34 @@ class DatabaseService {
   }
 
   // User Methods
-  saveUser(routerId, name, password, profile, address, comment, expiryTime) {
+  async saveUser(routerId, name, password, profile, address, comment, expiryTime) {
     try {
-      const user = {
-        id: this.nextId.users++,
-        routerId,
-        name,
-        password,
-        profile,
-        address,
-        comment,
-        expiryTime,
-        createdAt: new Date().toISOString(),
-      };
-      this.data.users.push(user);
-      this.save();
-      return {
-        success: true,
-        id: user.id,
-        message: 'User saved successfully',
-      };
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{ routerId, name, password, profile, address, comment, expiryTime }])
+        .select();
+      if (error) throw error;
+      return { success: true, id: data[0].id, message: 'User saved successfully' };
     } catch (error) {
       return { success: false, message: `Error saving user: ${error.message}` };
     }
   }
 
-  getUsersByRouterId(routerId) {
+  async getUsersByRouterId(routerId) {
     try {
-      return (this.data.users || []).filter((u) => u.routerId === routerId);
+      const { data, error } = await supabase.from('users').select('*').eq('routerId', routerId);
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching users:', error);
       return [];
     }
   }
 
-  deleteUser(id) {
+  async deleteUser(id) {
     try {
-      this.data.users = this.data.users.filter((u) => u.id !== id);
-      this.save();
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) throw error;
       return { success: true, message: 'User deleted successfully' };
     } catch (error) {
       return { success: false, message: `Error deleting user: ${error.message}` };
@@ -179,37 +118,32 @@ class DatabaseService {
   }
 
   // Usage History Methods
-  saveUsageHistory(routerId, userId, userName, bytesIn, bytesOut, loginTime, logoutTime, status = 'active') {
+  async saveUsageHistory(routerId, userId, userName, bytesIn, bytesOut, loginTime, logoutTime, status = 'active') {
     try {
       const sessionDuration = logoutTime
         ? (new Date(logoutTime) - new Date(loginTime)) / 1000
         : null;
 
-      const history = {
-        id: this.nextId.usage_history++,
-        routerId,
-        userId,
-        userName,
-        bytesIn,
-        bytesOut,
-        loginTime,
-        logoutTime,
-        sessionDuration,
-        status,
-        createdAt: new Date().toISOString(),
-      };
-      this.data.usage_history.push(history);
-      this.save();
+      const { error } = await supabase
+        .from('usage_history')
+        .insert([{ routerId, userId, userName, bytesIn, bytesOut, loginTime, logoutTime, sessionDuration, status }]);
+      if (error) throw error;
       return { success: true, message: 'Usage history saved' };
     } catch (error) {
       return { success: false, message: `Error saving history: ${error.message}` };
     }
   }
 
-  getUsageHistory(routerId, limit = 100) {
+  async getUsageHistory(routerId, limit = 100) {
     try {
-      const history = (this.data.usage_history || []).filter((h) => h.routerId === routerId);
-      return history.slice(-limit).reverse();
+      const { data, error } = await supabase
+        .from('usage_history')
+        .select('*')
+        .eq('routerId', routerId)
+        .order('createdAt', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching history:', error);
       return [];
@@ -217,50 +151,51 @@ class DatabaseService {
   }
 
   // Settings Methods
-  setSetting(key, value) {
+  async setSetting(key, value) {
     try {
-      this.data.settings[key] = value;
-      this.save();
+      const { error } = await supabase
+        .from('settings')
+        .upsert([{ key, value }], { onConflict: 'key' });
+      if (error) throw error;
       return { success: true };
     } catch (error) {
       return { success: false, message: error.message };
     }
   }
 
-  getSetting(key) {
+  async getSetting(key) {
     try {
-      return this.data.settings[key] || null;
+      const { data, error } = await supabase.from('settings').select('value').eq('key', key).single();
+      if (error) throw error;
+      return data?.value || null;
     } catch (error) {
-      console.error('Error fetching setting:', error);
       return null;
     }
   }
 
   // Login History Methods
-  saveLoginHistory(routerId, userName, ipAddress, macAddress, status) {
+  async saveLoginHistory(routerId, userName, ipAddress, macAddress, status) {
     try {
-      const login = {
-        id: this.nextId.login_history++,
-        routerId,
-        userName,
-        ipAddress,
-        macAddress,
-        loginTime: new Date().toISOString(),
-        logoutTime: null,
-        status,
-      };
-      this.data.login_history.push(login);
-      this.save();
+      const { error } = await supabase
+        .from('login_history')
+        .insert([{ routerId, userName, ipAddress, macAddress, status }]);
+      if (error) throw error;
       return { success: true };
     } catch (error) {
       return { success: false, message: error.message };
     }
   }
 
-  getLoginHistory(routerId, limit = 50) {
+  async getLoginHistory(routerId, limit = 50) {
     try {
-      const history = (this.data.login_history || []).filter((h) => h.routerId === routerId);
-      return history.slice(-limit).reverse();
+      const { data, error } = await supabase
+        .from('login_history')
+        .select('*')
+        .eq('routerId', routerId)
+        .order('loginTime', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching login history:', error);
       return [];
@@ -268,31 +203,29 @@ class DatabaseService {
   }
 
   // Sales Methods
-  saveSale(routerId, voucherName, profile, price) {
+  async saveSale(routerId, voucherName, profile, price) {
     try {
-      // Check if this voucher was already sold to prevent duplicates
-      const existing = this.data.sales.find(s => s.voucherName === voucherName && s.routerId === routerId);
-      if (existing) return { success: true, message: 'Already recorded' };
-
-      const sale = {
-        id: this.nextId.sales++,
-        routerId,
-        voucherName,
-        profile,
-        price: parseFloat(price) || 0,
-        soldAt: new Date().toISOString(),
-      };
-      this.data.sales.push(sale);
-      this.save();
+      const { error } = await supabase
+        .from('sales')
+        .insert([{ routerId, voucherName, profile, price }]);
+      if (error) {
+        if (error.code === '23505') return { success: true, message: 'Already recorded' }; // Unique violation
+        throw error;
+      }
       return { success: true };
     } catch (error) {
       return { success: false, message: error.message };
     }
   }
 
-  getSales(routerId) {
+  async getSales(routerId) {
     try {
-      return (this.data.sales || []).filter((s) => s.routerId === routerId);
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('routerId', routerId);
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching sales:', error);
       return [];
@@ -300,7 +233,7 @@ class DatabaseService {
   }
 
   closeDatabase() {
-    this.save();
+    // No-op for Supabase
   }
 }
 
