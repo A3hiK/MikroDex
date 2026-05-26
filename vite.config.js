@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/MikroDex/',
+  base: '/',
   server: {
     port: 5173,
     strictPort: false,

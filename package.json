@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "description": "Modern Dark Futuristic MikroTik Hotspot Manager Desktop App",
   "main": "electron/main.js",
-  "homepage": "https://A3hiK.github.io/MikroDex/",
+  "homepage": "https://mikrodex.pro.bd/",
   "scripts": {
     "predeploy": "npm run build && New-Item -Path \"dist\\.nojekyll\" -ItemType \"file\" -Force",
     "deploy": "gh-pages -d dist -t",
